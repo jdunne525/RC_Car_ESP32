@@ -9,6 +9,7 @@
 
 #include <ESP8266WiFi.h>
 #include <WiFiUDP.h>
+#include <ArduinoOTA.h>
 
 int status = WL_IDLE_STATUS;
 const char* ssid = "***REMOVED***";  //  your network SSID (name)
@@ -83,12 +84,17 @@ void setup()
   Serial.println(localPort);
   Udp.begin(localPort);
   debugUdp.begin(debugPort);
+  ArduinoOTA.begin();
+
 }
 
 void loop()
 {
   int noBytes = Udp.parsePacket();
   if ( noBytes ) {
+
+    debugUdp.beginPacket(debugUdp.remoteIP(), debugUdp.remotePort());
+
     /*
     Serial.print(millis() / 1000);
     Serial.print(":Packet of ");
@@ -120,16 +126,33 @@ void loop()
     else if (cmdStartsWith(packetBuffer, "FU")) {
       digitalWrite(MotorForwardPin, LOW);   // turn the LED on (HIGH is the voltage level)
     }
-    
-    
+    else if (cmdStartsWith(packetBuffer, "BD")) {
+      digitalWrite(MotorBackwardPin, HIGH);   // turn the LED on (HIGH is the voltage level)
+    }
+    else if (cmdStartsWith(packetBuffer, "BU")) {
+      digitalWrite(MotorBackwardPin, LOW);   // turn the LED on (HIGH is the voltage level)
+    }
+    else if (cmdStartsWith(packetBuffer, "LD")) {
+      digitalWrite(MotorLeftPin, HIGH);   // turn the LED on (HIGH is the voltage level)
+    }
+    else if (cmdStartsWith(packetBuffer, "Lu")) {
+      digitalWrite(MotorLeftPin, LOW);   // turn the LED on (HIGH is the voltage level)
+    }
+    else if (cmdStartsWith(packetBuffer, "RD")) {
+      digitalWrite(MotorRightPin, HIGH);   // turn the LED on (HIGH is the voltage level)
+    }
+    else if (cmdStartsWith(packetBuffer, "Ru")) {
+      digitalWrite(MotorRightPin, LOW);   // turn the LED on (HIGH is the voltage level)
+    }
 
 
-    
-    Serial.println();
     debugUdp.println();
+    debugUdp.endPacket();
+
+    Serial.println();
   } // end if
 
-
+  ArduinoOTA.handle();
 }
 
 
