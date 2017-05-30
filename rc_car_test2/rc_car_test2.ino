@@ -16,7 +16,7 @@ const char* ssid = "***REMOVED***";  //  your network SSID (name)
 const char* pass = "***REMOVED***";       // your network password
 
 unsigned int localPort = 9876;      // local port to listen for UDP packets
-unsigned int debugPort = 23;
+unsigned int debugPort = 2300;
 
 byte packetBuffer[512]; //buffer to hold incoming and outgoing packets
 
@@ -28,10 +28,10 @@ WiFiUDP debugUdp;
 int MotorForwardPin = 0;
 int MotorBackwardPin = 5;
 
-int MotorLeftPin = 4;
-int MotorRightPin = 13;
+int MotorLeftPin = 13;
+int MotorRightPin = 12;
 
-int MotorSleepPin = 12;
+int MotorSleepPin = 4;
 
 
 
@@ -135,13 +135,13 @@ void loop()
     else if (cmdStartsWith(packetBuffer, "LD")) {
       digitalWrite(MotorLeftPin, HIGH);   // turn the LED on (HIGH is the voltage level)
     }
-    else if (cmdStartsWith(packetBuffer, "Lu")) {
+    else if (cmdStartsWith(packetBuffer, "LU")) {
       digitalWrite(MotorLeftPin, LOW);   // turn the LED on (HIGH is the voltage level)
     }
     else if (cmdStartsWith(packetBuffer, "RD")) {
       digitalWrite(MotorRightPin, HIGH);   // turn the LED on (HIGH is the voltage level)
     }
-    else if (cmdStartsWith(packetBuffer, "Ru")) {
+    else if (cmdStartsWith(packetBuffer, "RU")) {
       digitalWrite(MotorRightPin, LOW);   // turn the LED on (HIGH is the voltage level)
     }
 
