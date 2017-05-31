@@ -18,7 +18,15 @@ const char* pass = "***REMOVED***";       // your network password
 unsigned int localPort = 9876;      // local port to listen for UDP packets
 unsigned int debugPort = 23000;
 
+unsigned int PWMFrequency = 300;     
+//1KHz pwm squeals like crazy...
+//5KHz:  squeal isn't horrible, but don't go below about 600 for the PWM value.. torque seems low
+//300Hz: much better!  okay down to about 350 
+//200Hz: okay.. 300 seems better
+//100Hz: no good.  very non-linear.. we're delivering too much during the on pulses the motor barely slows at lower duty cycles
+
 byte packetBuffer[512]; //buffer to hold incoming and outgoing packets
+char newbuffer[32];
 
 // A UDP instance to let us send and receive packets over UDP
 WiFiUDP Udp;
@@ -36,6 +44,7 @@ int MotorSleepPin = 0;
 
 int LEDPin = 0;
 
+int MotorSpeed = 600;
 
 
 
@@ -91,7 +100,9 @@ void setup()
   //debugUdp.begin(debugPort);
 
   OTASetup();
-  
+
+  analogWriteFreq(PWMFrequency);
+  //analogWrite(MotorForwardPin, 300);     //out of PWMRANGE
 }
 
 void loop()
@@ -127,30 +138,47 @@ void loop()
     } // end for
 
     if (cmdStartsWith(packetBuffer, "FD")) {
-      digitalWrite(MotorForwardPin, HIGH);   // turn the LED on (HIGH is the voltage level)
+      //digitalWrite(MotorForwardPin, HIGH);
+      analogWrite(MotorForwardPin, MotorSpeed);
     }
     else if (cmdStartsWith(packetBuffer, "FU")) {
-      digitalWrite(MotorForwardPin, LOW);   // turn the LED on (HIGH is the voltage level)
+      digitalWrite(MotorForwardPin, LOW);
+      analogWrite(MotorForwardPin, 0);
     }
     else if (cmdStartsWith(packetBuffer, "BD")) {
-      digitalWrite(MotorBackwardPin, HIGH);   // turn the LED on (HIGH is the voltage level)
+      analogWrite(MotorForwardPin, 0);
+      //digitalWrite(MotorBackwardPin, HIGH);
+      analogWrite(MotorBackwardPin, MotorSpeed);
     }
     else if (cmdStartsWith(packetBuffer, "BU")) {
-      digitalWrite(MotorBackwardPin, LOW);   // turn the LED on (HIGH is the voltage level)
+      digitalWrite(MotorBackwardPin, LOW);
+      analogWrite(MotorBackwardPin, 0);
     }
     else if (cmdStartsWith(packetBuffer, "LD")) {
-      digitalWrite(MotorLeftPin, HIGH);   // turn the LED on (HIGH is the voltage level)
+      digitalWrite(MotorLeftPin, HIGH);
     }
     else if (cmdStartsWith(packetBuffer, "LU")) {
-      digitalWrite(MotorLeftPin, LOW);   // turn the LED on (HIGH is the voltage level)
+      digitalWrite(MotorLeftPin, LOW);
     }
     else if (cmdStartsWith(packetBuffer, "RD")) {
-      digitalWrite(MotorRightPin, HIGH);   // turn the LED on (HIGH is the voltage level)
+      digitalWrite(MotorRightPin, HIGH);
     }
     else if (cmdStartsWith(packetBuffer, "RU")) {
-      digitalWrite(MotorRightPin, LOW);   // turn the LED on (HIGH is the voltage level)
+      digitalWrite(MotorRightPin, LOW);
     }
-
+    else if (cmdStartsWith(packetBuffer, "SP")) {
+      
+      for (int i = 0; i < 10; i++) newbuffer[i] = 0;
+      for (int i = 0; i < 10; i++) {
+        if (packetBuffer[i+3] < '0') break;
+        newbuffer[i] = packetBuffer[i+3];
+        //printf("%d\n",newbuffer[i]);
+      }
+      
+      MotorSpeed = (int)atoi(newbuffer);
+      //printf("MotorSpeed: %d\n",MotorSpeed);
+      //analogWrite(MotorForwardPin, MotorSpeed);
+    }
 
     //debugUdp.println();
     //debugUdp.endPacket();
