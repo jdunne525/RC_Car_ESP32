@@ -16,22 +16,25 @@ const char* ssid = "***REMOVED***";  //  your network SSID (name)
 const char* pass = "***REMOVED***";       // your network password
 
 unsigned int localPort = 9876;      // local port to listen for UDP packets
-unsigned int debugPort = 2300;
+unsigned int debugPort = 23000;
 
 byte packetBuffer[512]; //buffer to hold incoming and outgoing packets
 
 // A UDP instance to let us send and receive packets over UDP
 WiFiUDP Udp;
-WiFiUDP debugUdp;
+//WiFiUDP debugUdp;
 
+int OTAInProcess = false;
 
-int MotorForwardPin = 0;
-int MotorBackwardPin = 5;
+int MotorForwardPin = 14;
+int MotorBackwardPin = 12;
 
-int MotorLeftPin = 13;
-int MotorRightPin = 12;
+int MotorLeftPin = 5;
+int MotorRightPin = 4;
 
-int MotorSleepPin = 4;
+int MotorSleepPin = 0;
+
+int LEDPin = 0;
 
 
 
@@ -44,13 +47,15 @@ void setup()
   pinMode(MotorLeftPin, OUTPUT);
   pinMode(MotorRightPin, OUTPUT);
   pinMode(MotorSleepPin, OUTPUT);
-
+  pinMode(LEDPin, OUTPUT);
+  
   digitalWrite(MotorForwardPin, LOW);
   digitalWrite(MotorBackwardPin, LOW);
   digitalWrite(MotorLeftPin, LOW);
   digitalWrite(MotorRightPin, LOW);
   
   digitalWrite(MotorSleepPin, HIGH);
+  //digitalWrite(LEDPin, HIGH);
    
   // Open serial communications and wait for port to open:
   Serial.begin(115200);
@@ -83,7 +88,7 @@ void setup()
   Serial.print("Udp server started at port ");
   Serial.println(localPort);
   Udp.begin(localPort);
-  debugUdp.begin(debugPort);
+  //debugUdp.begin(debugPort);
 
   OTASetup();
   
@@ -94,7 +99,7 @@ void loop()
   int noBytes = Udp.parsePacket();
   if ( noBytes ) {
 
-    debugUdp.beginPacket(debugUdp.remoteIP(), debugUdp.remotePort());
+    //debugUdp.beginPacket(debugUdp.remoteIP(), debugUdp.remotePort());
 
     /*
     Serial.print(millis() / 1000);
@@ -112,7 +117,7 @@ void loop()
     for (int i=1;i<=noBytes;i++){
       //Serial.print(packetBuffer[i-1],HEX);
       Serial.write(packetBuffer[i-1]);
-      debugUdp.write(packetBuffer[i-1]);
+      //debugUdp.write(packetBuffer[i-1]);
 
       
       if (i % 32 == 0){
@@ -147,13 +152,16 @@ void loop()
     }
 
 
-    debugUdp.println();
-    debugUdp.endPacket();
+    //debugUdp.println();
+    //debugUdp.endPacket();
 
     Serial.println();
   } // end if
 
   ArduinoOTA.handle();
+  while (OTAInProcess) {
+    ArduinoOTA.handle();
+  }
 }
 
 
@@ -194,6 +202,7 @@ void printWifiStatus() {
 void  OTASetup()
 {
   ArduinoOTA.onStart([]() {
+    OTAInProcess = true;
     Serial.println("Start");
   });
   ArduinoOTA.onEnd([]() {
