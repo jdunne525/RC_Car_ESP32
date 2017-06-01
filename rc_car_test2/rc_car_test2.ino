@@ -46,6 +46,19 @@ int LEDPin = 0;
 
 int MotorSpeed = 600;
 
+int TurnSpeed = 0;
+int TurnMidPoint = 50;
+int TurnMaxSpeed = 100;
+int TurnDeadband = 10;
+int HardTurnPWM = 300;
+int SoftTurnPWM = 150;
+int TurnPWM = 0;
+
+int PWMTicksPerTurnSpeed = 5;   //(HardTurnPWM - SoftTurnPWM) / (TurnMidPoint - TurnDeadband)
+
+//Notes on PWM controlled Turning:
+//20Hz at 150 through 250 / 1024 counts seem to be good turning thresholds
+
 
 
 void setup()
@@ -103,6 +116,19 @@ void setup()
 
   analogWriteFreq(PWMFrequency);
   //analogWrite(MotorForwardPin, 300);     //out of PWMRANGE
+
+//Turn test:
+//  for (int i = 150; i < 250; i+= 10) {
+//    analogWriteFreq(20);
+//    analogWrite(MotorLeftPin, i);
+//    delay(1000);
+//    analogWrite(MotorLeftPin, 0);
+//    delay(1000);
+//  }
+
+  //analogWriteFreq(PWMFrequency);
+
+  analogWriteFreq(20);
 }
 
 void loop()
@@ -179,6 +205,40 @@ void loop()
       //printf("MotorSpeed: %d\n",MotorSpeed);
       //analogWrite(MotorForwardPin, MotorSpeed);
     }
+    else if (cmdStartsWith(packetBuffer, "Y")) {
+      for (int i = 0; i < 10; i++) newbuffer[i] = 0;
+      for (int i = 0; i < 10; i++) {
+        if (packetBuffer[i+2] < '0') break;
+        newbuffer[i] = packetBuffer[i+2];
+      }
+      
+      TurnSpeed = (int)atoi(newbuffer);
+
+      if (TurnSpeed <= TurnMidPoint - TurnDeadband) {
+        TurnPWM = PWMTicksPerTurnSpeed * ((TurnMidPoint - TurnDeadband) - TurnSpeed) + SoftTurnPWM;
+        Serial.print("left: ");
+        Serial.printf("%d\n",TurnPWM);
+        
+        if (TurnPWM > HardTurnPWM) TurnPWM = HardTurnPWM;
+        analogWrite(MotorLeftPin, TurnPWM);
+        analogWrite(MotorRightPin, 0);
+      }
+      else if (TurnSpeed >= TurnMidPoint + TurnDeadband) {
+        TurnPWM = PWMTicksPerTurnSpeed * (TurnSpeed - (TurnMidPoint + TurnDeadband)) + SoftTurnPWM;
+        Serial.print("right: ");
+        Serial.printf("%d\n",TurnPWM);
+        
+        if (TurnPWM > HardTurnPWM) TurnPWM = HardTurnPWM;
+        analogWrite(MotorRightPin, TurnPWM);
+        analogWrite(MotorLeftPin, 0);
+      }
+      else {
+        analogWrite(MotorLeftPin, 0);
+        analogWrite(MotorRightPin, 0);
+      }
+      
+    }
+
 
     //debugUdp.println();
     //debugUdp.endPacket();
