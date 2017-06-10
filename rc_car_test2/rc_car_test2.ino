@@ -202,7 +202,7 @@ void loop()
     // We've received a packet, read the data from it
     Udp.read(packetBuffer, noBytes); // read the packet into the buffer
 
- //DebugMode = false;
+ DebugMode = false;
     if (DebugMode) {
       // display the packet contents in HEX
       for (int i = 1; i <= noBytes; i++) {
@@ -246,28 +246,47 @@ void loop()
       }
     }
     else if (cmdStartsWith(packetBuffer, "D")) {
-      for (int i = 0; i < 10; i++) newbuffer[i] = 0;
-      for (int i = 0; i < 10; i++) {
-        if (packetBuffer[i + 4] < '0') break;
-        newbuffer[i] = packetBuffer[i + 4];
-        //printf("%d\n",newbuffer[i]);
-      }
 
       if (packetBuffer[1] == '1' && packetBuffer[2] == '1') {
         Stop();
       }
-      else if (packetBuffer[1] == '1') {
+      else if (packetBuffer[1] == '1') {    //forward button
         GoForward();
       }
-      else if (packetBuffer[2] == '1') {
+      else if (packetBuffer[2] == '1') {    //backward button
         GoBackward();
       }
       else {
         GoNeutral();
       }
 
-      TurnSpeed = (int)atoi(newbuffer);
+      if (packetBuffer[3] == '1') {         //light button
+        if (!LightDebounce) {
+          LightDebounceMillis = millis();
+          LightDebounce = true;
+          if (LEDOn) {
+            digitalWrite(LEDPin, false);
+          }
+          else {
+            digitalWrite(LEDPin, true);
+          }
+          LEDOn = !LEDOn;
+        }
+      }
+
+      TurnSpeed = (int)StrToLong(packetBuffer, 5, 2, 16);    //*str, startindex, len, base
+      //printf("TurnSpeed: %d\n",TurnSpeed);
+//      for (int i = 0; i < 10; i++) newbuffer[i] = 0;
+//      for (int i = 0; i < 10; i++) {
+//        if (packetBuffer[i + 4] < '0') break;
+//        newbuffer[i] = packetBuffer[i + 4];
+//        //printf("%d\n",newbuffer[i]);
+//      }
+//      TurnSpeed = (int)strtoul(newbuffer, NULL, 16);
       HandleTurnSpeed();
+
+      MotorSpeed = (int)StrToLong(packetBuffer, 8, 4, 16);    //*str, startindex, len, base
+      //printf("MotorSpeed: %d\n",MotorSpeed);
     }
     else if (cmdStartsWith(packetBuffer, "FD")) {
       GoForward();
@@ -319,6 +338,7 @@ void loop()
       //analogWrite(MotorForwardPin, MotorSpeed);
     }
     else if (cmdStartsWith(packetBuffer, "Y")) {
+      //StrToLong(packetBuffer, 2, 8, 10);
       for (int i = 0; i < 10; i++) newbuffer[i] = 0;
       for (int i = 0; i < 10; i++) {
         if (packetBuffer[i + 2] < '0') break;
@@ -352,6 +372,16 @@ void loop()
   while (OTAInProcess) {
     ArduinoOTA.handle();
   }
+}
+
+unsigned long StrToLong(byte *str, int StartIndex, int Len, int base){
+  for (int i = 0; i < 9; i++) newbuffer[i] = 0;
+  int j = 0;
+  for (int i = StartIndex; i < StartIndex + Len; i++) {
+    if (packetBuffer[i] < '0') break;
+    newbuffer[j++] = packetBuffer[i];
+  }
+  return (strtoul(newbuffer, NULL, 16));
 }
 
 void  GoForward() {
