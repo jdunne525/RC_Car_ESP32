@@ -221,30 +221,6 @@ void loop()
         digitalWrite(0, LOW);
         ESP.restart();
     }
-    else if (cmdStartsWith(packetBuffer, "TU")) {
-      GoNeutral();
-      //printf("Neutral");
-    }                                                                                                                                                                                                                                             
-    else if (cmdStartsWith(packetBuffer, "T ")) {
-
-      for (int i = 0; i < 10; i++) newbuffer[i] = 0;
-      for (int i = 0; i < 10; i++) {
-        if (packetBuffer[i + 4] < '0') break;
-        newbuffer[i] = packetBuffer[i + 4];
-        //printf("%d\n",newbuffer[i]);
-      }
-
-      Direction = (int)atoi(newbuffer);
-      if (Direction <= 30) {
-        GoForward();
-      }
-      else if (Direction >= 70) {
-        GoBackward();
-      }
-      else {
-        GoNeutral();
-      }
-    }
     else if (cmdStartsWith(packetBuffer, "D")) {
 
       if (packetBuffer[1] == '1' && packetBuffer[2] == '1') {
@@ -275,92 +251,12 @@ void loop()
       }
 
       TurnSpeed = (int)StrToLong(packetBuffer, 5, 2, 16);    //*str, startindex, len, base
-      //printf("TurnSpeed: %d\n",TurnSpeed);
-//      for (int i = 0; i < 10; i++) newbuffer[i] = 0;
-//      for (int i = 0; i < 10; i++) {
-//        if (packetBuffer[i + 4] < '0') break;
-//        newbuffer[i] = packetBuffer[i + 4];
-//        //printf("%d\n",newbuffer[i]);
-//      }
-//      TurnSpeed = (int)strtoul(newbuffer, NULL, 16);
       HandleTurnSpeed();
-
       MotorSpeed = (int)StrToLong(packetBuffer, 8, 4, 16);    //*str, startindex, len, base
       //printf("MotorSpeed: %d\n",MotorSpeed);
+      //printf("TurnSpeed: %d\n",TurnSpeed);
     }
-    else if (cmdStartsWith(packetBuffer, "FD")) {
-      GoForward();
-    }
-    else if (cmdStartsWith(packetBuffer, "FU")) {
-      FwdActive = false;
-      digitalWrite(MotorForwardPin, LOW);
-      analogWrite(MotorForwardPin, 0);
-    }
-    else if (cmdStartsWith(packetBuffer, "BD")) {
-      GoBackward();
-    }
-    else if (cmdStartsWith(packetBuffer, "BU")) {
-      BackActive = false;
-      digitalWrite(MotorBackwardPin, LOW);
-      analogWrite(MotorBackwardPin, 0);
-    }
-    else if (cmdStartsWith(packetBuffer, "LD")) {
-      digitalWrite(MotorRightPin, LOW);
-      digitalWrite(MotorLeftPin, HIGH);
-      LeftActive = true;
-      LeftLastMillis = millis();
-    }
-    else if (cmdStartsWith(packetBuffer, "LU")) {
-      LeftActive = false;
-      digitalWrite(MotorLeftPin, LOW);
-    }
-    else if (cmdStartsWith(packetBuffer, "RD")) {
-      digitalWrite(MotorLeftPin, LOW);
-      digitalWrite(MotorRightPin, HIGH);
-      RightActive = true;
-      RightLastMillis = millis();
-    }
-    else if (cmdStartsWith(packetBuffer, "RU")) {
-      RightActive = false;
-      digitalWrite(MotorRightPin, LOW);
-    }
-    else if (cmdStartsWith(packetBuffer, "SP")) {
 
-      for (int i = 0; i < 10; i++) newbuffer[i] = 0;
-      for (int i = 0; i < 10; i++) {
-        if (packetBuffer[i + 3] < '0') break;
-        newbuffer[i] = packetBuffer[i + 3];
-        //printf("%d\n",newbuffer[i]);
-      }
-
-      MotorSpeed = (int)atoi(newbuffer);
-      //printf("MotorSpeed: %d\n",MotorSpeed);
-      //analogWrite(MotorForwardPin, MotorSpeed);
-    }
-    else if (cmdStartsWith(packetBuffer, "Y")) {
-      //StrToLong(packetBuffer, 2, 8, 10);
-      for (int i = 0; i < 10; i++) newbuffer[i] = 0;
-      for (int i = 0; i < 10; i++) {
-        if (packetBuffer[i + 2] < '0') break;
-        newbuffer[i] = packetBuffer[i + 2];
-      }
-
-      TurnSpeed = (int)atoi(newbuffer);
-    }
-    else if (cmdStartsWith(packetBuffer, "LIGHT")) {
-
-      if (!LightDebounce) {
-        LightDebounceMillis = millis();
-        LightDebounce = true;
-        if (LEDOn) {
-          digitalWrite(LEDPin, false);
-        }
-        else {
-          digitalWrite(LEDPin, true);
-        }
-        LEDOn = !LEDOn;
-      }
-    }
 
     //debugUdp.println();
     //debugUdp.endPacket();
@@ -537,4 +433,51 @@ void  OTASetup()
   });
   ArduinoOTA.begin();
 }
+
+
+////Untested as it turns out we don't need multiple frequencies for analogWrite()
+////Soft PWM, which supports exactly one pin at a variable frequency and handled in the main loop()
+//int SoftPWMPinNum = 0;
+//int SoftPWMPeriod = 1000;
+//int SoftPWMOffTime = 500;
+//int SoftPWMOnTime = 500;
+//
+//void  SetSoftPWMPeriod(int PWMPeriod) {
+//  SoftPWMPeriod = PWMPeriod;
+//}
+//void  SetSoftPWM(int PinToPWM, int PWMOnTime) {
+//  SoftPWMPinNum = PinToPWM;
+//  SoftPWMOnTime = PWMOnTime;
+//  if (SoftPWMOnTime < SoftPWMPeriod) {
+//    SoftPWMOffTime = SoftPWMPeriod - SoftPWMOnTime;
+//  }
+//  else {
+//    SoftPWMOffTime = 0;
+//  }
+//}
+//
+//void  HandleSoftPWM() {
+//  static unsigned long SoftPWMlastEventMicros = 0;
+//
+//  if (SoftPWMOffTime == 0) {
+//    digitalWrite(SoftPWMPinNum, true);
+//    return;
+//  }
+//  else if (SoftPWMOffTime == 0) {
+//    digitalWrite(SoftPWMPinNum, false);
+//    return;
+//  }
+//  if (digitalRead(SoftPWMPinNum)) {
+//    if (micros() - SoftPWMlastEventMicros >= SoftPWMOnTime) {
+//      digitalWrite(SoftPWMPinNum, false);
+//      SoftPWMlastEventMicros = micros();
+//    }
+//  }
+//  else {
+//    if (micros() - SoftPWMlastEventMicros >= SoftPWMOffTime) {
+//      digitalWrite(SoftPWMPinNum, true);
+//      SoftPWMlastEventMicros = micros();
+//    }
+//  }
+//}
 
