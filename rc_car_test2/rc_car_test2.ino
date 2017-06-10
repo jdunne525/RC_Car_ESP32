@@ -93,12 +93,10 @@ void setup()
   //digitalWrite(LEDPin, HIGH);
 
   // Open serial communications and wait for port to open:
-  if (DebugMode) {
     Serial.begin(115200);
     while (!Serial) {
       ; // wait for serial port to connect. Needed for Leonardo only
     }
-  }
 
   // setting up Station AP
   WiFi.begin(ssid, pass);
