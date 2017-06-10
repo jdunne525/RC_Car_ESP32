@@ -42,9 +42,11 @@ int MotorBackwardPin = 12;
 int MotorLeftPin = 5;
 int MotorRightPin = 4;
 
-int MotorSleepPin = 0;
+int MotorSleepPin = 2;
+int TestPin = 16;
 
 int LEDPin = 0;
+bool LEDOn = true;
 
 int MotorSpeed = 600;
 int Direction = 50;
@@ -69,6 +71,8 @@ bool LeftActive = false;
 int LeftLastMillis = 0;
 bool RightActive = false;
 int RightLastMillis = 0;
+bool LightDebounce = false;
+int LightDebounceMillis = 0;
 
 //Notes on PWM controlled Turning:
 //20Hz at 150 through 250 / 1024 counts seem to be good turning thresholds
@@ -84,13 +88,19 @@ void setup()
   pinMode(MotorRightPin, OUTPUT);
   pinMode(MotorSleepPin, OUTPUT);
   pinMode(LEDPin, OUTPUT);
+  pinMode(TestPin, OUTPUT);
 
   digitalWrite(MotorForwardPin, LOW);
   digitalWrite(MotorBackwardPin, LOW);
   digitalWrite(MotorLeftPin, LOW);
   digitalWrite(MotorRightPin, LOW);
 
-  digitalWrite(MotorSleepPin, HIGH);
+  //digitalWrite(MotorSleepPin, HIGH);
+  analogWrite(MotorSleepPin, 512);
+
+  if (LEDOn) {
+    digitalWrite(LEDPin, false);
+  }
   //digitalWrite(LEDPin, HIGH);
 
   // Open serial communications and wait for port to open:
@@ -148,6 +158,7 @@ void setup()
 void loop()
 {
 
+  
   if (FwdActive && millis() - FwdLastMillis > CommandTimeout) {
     FwdActive = false;
     digitalWrite(MotorForwardPin, LOW);
@@ -170,6 +181,9 @@ void loop()
     digitalWrite(MotorRightPin, LOW);
   }
 
+  if (LightDebounce && millis() - LightDebounceMillis > 250) {
+    LightDebounce = false;
+  }
   
   int noBytes = Udp.parsePacket();
   if ( noBytes ) {
@@ -239,7 +253,10 @@ void loop()
         //printf("%d\n",newbuffer[i]);
       }
 
-      if (packetBuffer[1] == '1') {
+      if (packetBuffer[1] == '1' && packetBuffer[2] == '1') {
+        Stop();
+      }
+      else if (packetBuffer[1] == '1') {
         GoForward();
       }
       else if (packetBuffer[2] == '1') {
@@ -310,7 +327,20 @@ void loop()
 
       TurnSpeed = (int)atoi(newbuffer);
     }
+    else if (cmdStartsWith(packetBuffer, "LIGHT")) {
 
+      if (!LightDebounce) {
+        LightDebounceMillis = millis();
+        LightDebounce = true;
+        if (LEDOn) {
+          digitalWrite(LEDPin, false);
+        }
+        else {
+          digitalWrite(LEDPin, true);
+        }
+        LEDOn = !LEDOn;
+      }
+    }
 
     //debugUdp.println();
     //debugUdp.endPacket();
@@ -327,16 +357,40 @@ void loop()
 void  GoForward() {
   digitalWrite(MotorBackwardPin, LOW);
   analogWrite(MotorBackwardPin, 0);
-  analogWrite(MotorForwardPin, MotorSpeed);
+
+  if (MotorSpeed >= 1020) {
+    digitalWrite(MotorForwardPin, true);
+  }
+  else {
+    analogWrite(MotorForwardPin, MotorSpeed);
+  }
+  
   FwdActive = true;
   FwdLastMillis = millis();
 //  printf("Fwd");
 }
 
+void  Stop() {
+  BackActive = false;
+  digitalWrite(MotorBackwardPin, HIGH);
+  analogWrite(MotorBackwardPin, 0);
+  FwdActive = false;
+  digitalWrite(MotorForwardPin, HIGH);
+  analogWrite(MotorForwardPin, 0);
+//  printf("Stop");
+}
+
 void  GoBackward() {
   digitalWrite(MotorForwardPin, LOW);
   analogWrite(MotorForwardPin, 0);
-  analogWrite(MotorBackwardPin, MotorSpeed);
+
+  if (MotorSpeed >= 1020) {
+    digitalWrite(MotorBackwardPin, true);
+  }
+  else {
+    analogWrite(MotorBackwardPin, MotorSpeed);
+  }
+  
   BackActive = true;
   BackLastMillis = millis();
 //  printf("Back");
