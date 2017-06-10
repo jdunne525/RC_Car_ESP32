@@ -11,7 +11,7 @@
 #include <WiFiUDP.h>
 #include <ArduinoOTA.h>
 
-int DebugMode = false;
+bool DebugMode = false;
 
 int status = WL_IDLE_STATUS;
 const char* ssid = "***REMOVED***";  //  your network SSID (name)
@@ -47,6 +47,7 @@ int MotorSleepPin = 0;
 int LEDPin = 0;
 
 int MotorSpeed = 600;
+int Direction = 50;
 
 int TurnSpeed = 0;
 int TurnMidPoint = 50;
@@ -93,10 +94,10 @@ void setup()
   //digitalWrite(LEDPin, HIGH);
 
   // Open serial communications and wait for port to open:
-    Serial.begin(115200);
-    while (!Serial) {
-      ; // wait for serial port to connect. Needed for Leonardo only
-    }
+  Serial.begin(115200);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for Leonardo only
+  }
 
   // setting up Station AP
   WiFi.begin(ssid, pass);
@@ -187,24 +188,72 @@ void loop()
     // We've received a packet, read the data from it
     Udp.read(packetBuffer, noBytes); // read the packet into the buffer
 
-    // display the packet contents in HEX
-    for (int i = 1; i <= noBytes; i++) {
-      //Serial.print(packetBuffer[i-1],HEX);
-      Serial.write(packetBuffer[i - 1]);
-      //debugUdp.write(packetBuffer[i-1]);
-      if (i % 32 == 0) {
-        Serial.println();
+ //DebugMode = false;
+    if (DebugMode) {
+      // display the packet contents in HEX
+      for (int i = 1; i <= noBytes; i++) {
+        //Serial.print(packetBuffer[i-1],HEX);
+        Serial.write(packetBuffer[i - 1]);
+        //debugUdp.write(packetBuffer[i-1]);
+        if (i % 32 == 0) {
+  //        Serial.println();
+        }
       }
+      Serial.println();
     }
 
-    if (cmdStartsWith(packetBuffer, "FD")) {
-      //digitalWrite(MotorForwardPin, HIGH);
+    if (cmdStartsWith(packetBuffer, "Reset")) {
+        pinMode(0, OUTPUT);
+        digitalWrite(0, LOW);
+        ESP.restart();
+    }
+    else if (cmdStartsWith(packetBuffer, "TU")) {
+      GoNeutral();
+      //printf("Neutral");
+    }                                                                                                                                                                                                                                             
+    else if (cmdStartsWith(packetBuffer, "T ")) {
 
-      digitalWrite(MotorBackwardPin, LOW);
-      analogWrite(MotorBackwardPin, 0);
-      analogWrite(MotorForwardPin, MotorSpeed);
-      FwdActive = true;
-      FwdLastMillis = millis();
+      for (int i = 0; i < 10; i++) newbuffer[i] = 0;
+      for (int i = 0; i < 10; i++) {
+        if (packetBuffer[i + 4] < '0') break;
+        newbuffer[i] = packetBuffer[i + 4];
+        //printf("%d\n",newbuffer[i]);
+      }
+
+      Direction = (int)atoi(newbuffer);
+      if (Direction <= 30) {
+        GoForward();
+      }
+      else if (Direction >= 70) {
+        GoBackward();
+      }
+      else {
+        GoNeutral();
+      }
+    }
+    else if (cmdStartsWith(packetBuffer, "D")) {
+      for (int i = 0; i < 10; i++) newbuffer[i] = 0;
+      for (int i = 0; i < 10; i++) {
+        if (packetBuffer[i + 4] < '0') break;
+        newbuffer[i] = packetBuffer[i + 4];
+        //printf("%d\n",newbuffer[i]);
+      }
+
+      if (packetBuffer[1] == '1') {
+        GoForward();
+      }
+      else if (packetBuffer[2] == '1') {
+        GoBackward();
+      }
+      else {
+        GoNeutral();
+      }
+
+      TurnSpeed = (int)atoi(newbuffer);
+      HandleTurnSpeed();
+    }
+    else if (cmdStartsWith(packetBuffer, "FD")) {
+      GoForward();
     }
     else if (cmdStartsWith(packetBuffer, "FU")) {
       FwdActive = false;
@@ -212,13 +261,7 @@ void loop()
       analogWrite(MotorForwardPin, 0);
     }
     else if (cmdStartsWith(packetBuffer, "BD")) {
-      //digitalWrite(MotorBackwardPin, HIGH);
-
-      digitalWrite(MotorForwardPin, LOW);
-      analogWrite(MotorForwardPin, 0);
-      analogWrite(MotorBackwardPin, MotorSpeed);
-      BackActive = true;
-      BackLastMillis = millis();
+      GoBackward();
     }
     else if (cmdStartsWith(packetBuffer, "BU")) {
       BackActive = false;
@@ -266,55 +309,13 @@ void loop()
       }
 
       TurnSpeed = (int)atoi(newbuffer);
-
-      if (TurnSpeed <= TurnMidPoint - TurnDeadband) {
-        TurnPWM = PWMTicksPerTurnSpeed * ((TurnMidPoint - TurnDeadband) - TurnSpeed) + SoftTurnPWM;
-        //Serial.print("left: ");
-        //Serial.printf("%d\n", TurnPWM);
-
-        LeftActive = true;
-        LeftLastMillis = millis();
-        
-        if (TurnPWM > HardTurnPWM) TurnPWM = HardTurnPWM;
-        if (TurnPWM == HardTurnPWM)  {
-          digitalWrite(MotorLeftPin, HIGH);
-          digitalWrite(MotorRightPin, LOW);
-        }
-        else {
-          analogWrite(MotorLeftPin, TurnPWM);
-          analogWrite(MotorRightPin, 0);
-        }
-      }
-      else if (TurnSpeed >= TurnMidPoint + TurnDeadband) {
-        TurnPWM = PWMTicksPerTurnSpeed * (TurnSpeed - (TurnMidPoint + TurnDeadband)) + SoftTurnPWM;
-        //Serial.print("right: ");
-        //Serial.printf("%d\n", TurnPWM);
-
-        RightActive = true;
-        RightLastMillis = millis();
-        
-        if (TurnPWM > HardTurnPWM) TurnPWM = HardTurnPWM;
-        if (TurnPWM == HardTurnPWM) {
-          digitalWrite(MotorRightPin, HIGH);
-          digitalWrite(MotorLeftPin, LOW);
-        }
-        else {
-          analogWrite(MotorRightPin, TurnPWM);
-          analogWrite(MotorLeftPin, 0);
-        }
-      }
-      else {
-        analogWrite(MotorLeftPin, 0);
-        analogWrite(MotorRightPin, 0);
-      }
-
     }
 
 
     //debugUdp.println();
     //debugUdp.endPacket();
 
-    Serial.println();
+//    Serial.println();
   } // end if
 
   ArduinoOTA.handle();
@@ -323,6 +324,78 @@ void loop()
   }
 }
 
+void  GoForward() {
+  digitalWrite(MotorBackwardPin, LOW);
+  analogWrite(MotorBackwardPin, 0);
+  analogWrite(MotorForwardPin, MotorSpeed);
+  FwdActive = true;
+  FwdLastMillis = millis();
+//  printf("Fwd");
+}
+
+void  GoBackward() {
+  digitalWrite(MotorForwardPin, LOW);
+  analogWrite(MotorForwardPin, 0);
+  analogWrite(MotorBackwardPin, MotorSpeed);
+  BackActive = true;
+  BackLastMillis = millis();
+//  printf("Back");
+}
+
+void  GoNeutral() {
+  BackActive = false;
+  digitalWrite(MotorBackwardPin, LOW);
+  analogWrite(MotorBackwardPin, 0);
+  FwdActive = false;
+  digitalWrite(MotorForwardPin, LOW);
+  analogWrite(MotorForwardPin, 0);
+//  printf("Neutral");
+}
+
+void HandleTurnSpeed() {
+  // Serial.printf("Turnspeed: %d  %d %d %d %d\n", TurnSpeed, newbuffer[0], newbuffer[1], newbuffer[2], newbuffer[3]);
+
+  if (TurnSpeed <= TurnMidPoint - TurnDeadband) {
+    TurnPWM = PWMTicksPerTurnSpeed * ((TurnMidPoint - TurnDeadband) - TurnSpeed) + SoftTurnPWM;
+    //Serial.print("left: ");
+    //Serial.printf("%d\n", TurnPWM);
+
+    LeftActive = true;
+    LeftLastMillis = millis();
+    
+    if (TurnPWM > HardTurnPWM) TurnPWM = HardTurnPWM;
+    if (TurnPWM == HardTurnPWM)  {
+      digitalWrite(MotorLeftPin, HIGH);
+      digitalWrite(MotorRightPin, LOW);
+    }
+    else {
+      analogWrite(MotorLeftPin, TurnPWM);
+      analogWrite(MotorRightPin, 0);
+    }
+  }
+  else if (TurnSpeed >= TurnMidPoint + TurnDeadband) {
+    TurnPWM = PWMTicksPerTurnSpeed * (TurnSpeed - (TurnMidPoint + TurnDeadband)) + SoftTurnPWM;
+    //Serial.print("right: ");
+    //Serial.printf("%d\n", TurnPWM);
+
+    RightActive = true;
+    RightLastMillis = millis();
+    
+    if (TurnPWM > HardTurnPWM) TurnPWM = HardTurnPWM;
+    if (TurnPWM == HardTurnPWM) {
+      digitalWrite(MotorRightPin, HIGH);
+      digitalWrite(MotorLeftPin, LOW);
+    }
+    else {
+      analogWrite(MotorRightPin, TurnPWM);
+      analogWrite(MotorLeftPin, 0);
+    }
+  }
+  else {
+    analogWrite(MotorLeftPin, 0);
+    analogWrite(MotorRightPin, 0);
+  }
+}
 
 boolean cmdStartsWith(byte *cmd, const char *st) { // checks if cmd starts with st
   for (int i = 0; ; i++) {
