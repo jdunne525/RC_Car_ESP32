@@ -46,6 +46,8 @@ int MotorBackwardChannel = 1;
 int MotorLeftChannel = 2;
 int MotorRightChannel = 3;
 
+// use 13 bit precission for LEDC timer
+#define LEDC_TIMER_13_BIT  13
 
 int MotorSleepPin = 25;
 int TestPin = 2;
@@ -85,6 +87,16 @@ int LightDebounceMillis = 0;
 
 #define analogWrite(pin, pwm) digitalWrite(pin, (pwm > 0))
 
+void ledcAnalogWrite(uint8_t channel, uint32_t value, uint32_t valueMax = 255) {
+  // calculate duty, 8191 from 2 ^ 13 - 1
+
+  uint32_t duty = (8191 / valueMax) * (value < valueMax ? value : valueMax);    //min(value, valueMax);
+
+  // write duty to LEDC
+  ledcWrite(channel, duty);
+}
+
+
 void setup()
 {
 
@@ -102,12 +114,12 @@ void setup()
   digitalWrite(MotorRightPin, LOW);
   digitalWrite(MotorSleepPin, HIGH);
 
-//  ledcSetup(MotorForwardChannel, PWMFrequency, LEDC_TIMER_13_BIT);
+  ledcSetup(MotorForwardChannel, PWMFrequency, LEDC_TIMER_13_BIT);
 //  ledcSetup(MotorBackwardChannel, PWMFrequency, LEDC_TIMER_13_BIT);
 //  ledcSetup(MotorLeftChannel, PWMFrequency, LEDC_TIMER_13_BIT);
 //  ledcSetup(MotorRightChannel, PWMFrequency, LEDC_TIMER_13_BIT);
 //
-//  ledcAttachPin(MotorForwardPin, MotorForwardChannel);
+  ledcAttachPin(MotorForwardPin, MotorForwardChannel);
 //  ledcAttachPin(MotorBackwardPin, MotorBackwardChannel);
 //  ledcAttachPin(MotorLeftPin, MotorLeftChannel);
 //  ledcAttachPin(MotorRightPin, MotorRightChannel);
@@ -200,7 +212,7 @@ void loop()
     // We've received a packet, read the data from it
     Udp.read(packetBuffer, noBytes); // read the packet into the buffer
 
- DebugMode = true;
+ DebugMode = false;
     if (DebugMode) {
       // display the packet contents in HEX
       for (int i = 1; i <= noBytes; i++) {
@@ -292,19 +304,26 @@ unsigned long StrToLong(byte *str, int StartIndex, int Len, int base){
 }
 
 void  GoForward() {
-  digitalWrite(MotorBackwardPin, LOW);
-  analogWrite(MotorBackwardPin, 0);
+  StopBackward();
 
-  if (MotorSpeed >= 1020) {
-    digitalWrite(MotorForwardPin, true);
-  }
-  else {
-    analogWrite(MotorForwardPin, MotorSpeed);
-  }
+//  if (MotorSpeed >= 1020) {
+//    digitalWrite(MotorForwardPin, true);
+//  }
+//  else {
+//    analogWrite(MotorForwardPin, MotorSpeed);
+//  }
+
+  ledcAnalogWrite(MotorForwardChannel, MotorSpeed, 1023);  
   
   FwdActive = true;
   FwdLastMillis = millis();
 //  printf("Fwd");
+}
+
+void  StopForward() {
+  digitalWrite(MotorForwardPin, LOW);
+  analogWrite(MotorForwardPin, 0);
+  ledcAnalogWrite(MotorForwardChannel, 0, 1023);
 }
 
 void  Stop() {
@@ -318,9 +337,8 @@ void  Stop() {
 }
 
 void  GoBackward() {
-  digitalWrite(MotorForwardPin, LOW);
-  analogWrite(MotorForwardPin, 0);
 
+  StopForward();
   if (MotorSpeed >= 1020) {
     digitalWrite(MotorBackwardPin, true);
   }
@@ -333,13 +351,16 @@ void  GoBackward() {
 //  printf("Back");
 }
 
-void  GoNeutral() {
-  BackActive = false;
+void  StopBackward() {
   digitalWrite(MotorBackwardPin, LOW);
   analogWrite(MotorBackwardPin, 0);
+}
+
+void  GoNeutral() {
+  BackActive = false;
+  StopBackward();
   FwdActive = false;
-  digitalWrite(MotorForwardPin, LOW);
-  analogWrite(MotorForwardPin, 0);
+  StopForward();
 //  printf("Neutral");
 }
 
