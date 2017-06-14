@@ -7,7 +7,7 @@
 
 */
 
-#include <ESP8266WiFi.h>
+#include <WiFi.h>
 #include <WiFiUDP.h>
 #include <ArduinoOTA.h>
 
@@ -20,7 +20,7 @@ const char* pass = "***REMOVED***";       // your network password
 unsigned int localPort = 9876;      // local port to listen for UDP packets
 unsigned int debugPort = 23000;
 
-unsigned int PWMFrequency = 300;
+unsigned int PWMFrequency = 20;       //20Hz is what we need for the steering to function properly
 //1KHz pwm squeals like crazy...
 //5KHz:  squeal isn't horrible, but don't go below about 600 for the PWM value.. torque seems low
 //300Hz: much better!  okay down to about 350
@@ -36,16 +36,21 @@ WiFiUDP Udp;
 
 int OTAInProcess = false;
 
-int MotorForwardPin = 14;
-int MotorBackwardPin = 12;
+int MotorForwardPin = 33;
+int MotorBackwardPin = 32;
+int MotorLeftPin = 12;
+int MotorRightPin = 14;
 
-int MotorLeftPin = 5;
-int MotorRightPin = 4;
+int MotorForwardChannel = 0;
+int MotorBackwardChannel = 1;
+int MotorLeftChannel = 2;
+int MotorRightChannel = 3;
 
-int MotorSleepPin = 2;
-int TestPin = 16;
 
-int LEDPin = 0;
+int MotorSleepPin = 25;
+int TestPin = 2;
+
+int LEDPin = 15;
 bool LEDOn = true;
 
 int MotorSpeed = 600;
@@ -78,6 +83,7 @@ int LightDebounceMillis = 0;
 //20Hz at 150 through 250 / 1024 counts seem to be good turning thresholds
 
 
+#define analogWrite(pin, pwm) digitalWrite(pin, (pwm > 0))
 
 void setup()
 {
@@ -94,9 +100,17 @@ void setup()
   digitalWrite(MotorBackwardPin, LOW);
   digitalWrite(MotorLeftPin, LOW);
   digitalWrite(MotorRightPin, LOW);
+  digitalWrite(MotorSleepPin, HIGH);
 
-  //digitalWrite(MotorSleepPin, HIGH);
-  analogWrite(MotorSleepPin, 512);
+//  ledcSetup(MotorForwardChannel, PWMFrequency, LEDC_TIMER_13_BIT);
+//  ledcSetup(MotorBackwardChannel, PWMFrequency, LEDC_TIMER_13_BIT);
+//  ledcSetup(MotorLeftChannel, PWMFrequency, LEDC_TIMER_13_BIT);
+//  ledcSetup(MotorRightChannel, PWMFrequency, LEDC_TIMER_13_BIT);
+//
+//  ledcAttachPin(MotorForwardPin, MotorForwardChannel);
+//  ledcAttachPin(MotorBackwardPin, MotorBackwardChannel);
+//  ledcAttachPin(MotorLeftPin, MotorLeftChannel);
+//  ledcAttachPin(MotorRightPin, MotorRightChannel);
 
   if (LEDOn) {
     digitalWrite(LEDPin, false);
@@ -112,7 +126,7 @@ void setup()
   // setting up Station AP
   WiFi.begin(ssid, pass);
 
-  Serial.println("ESP8266 RC receiver 1.1 powered by RoboRemo");
+  Serial.println("ES32 RC receiver 3.0 powered by RoboRemo");
 
   // Wait for connect to AP
   Serial.print("[Connecting]");
@@ -137,22 +151,6 @@ void setup()
   //debugUdp.begin(debugPort);
 
   OTASetup();
-
-  analogWriteFreq(PWMFrequency);
-  //analogWrite(MotorForwardPin, 300);     //out of PWMRANGE
-
-  //Turn test:
-  //  for (int i = 150; i < 250; i+= 10) {
-  //    analogWriteFreq(20);
-  //    analogWrite(MotorLeftPin, i);
-  //    delay(1000);
-  //    analogWrite(MotorLeftPin, 0);
-  //    delay(1000);
-  //  }
-
-  //analogWriteFreq(PWMFrequency);
-
-  analogWriteFreq(20);
 }
 
 void loop()
@@ -202,7 +200,7 @@ void loop()
     // We've received a packet, read the data from it
     Udp.read(packetBuffer, noBytes); // read the packet into the buffer
 
- DebugMode = false;
+ DebugMode = true;
     if (DebugMode) {
       // display the packet contents in HEX
       for (int i = 1; i <= noBytes; i++) {
@@ -218,10 +216,10 @@ void loop()
 
     if (cmdStartsWith(packetBuffer, "Reset")) {
         pinMode(0, OUTPUT);
-        digitalWrite(0, LOW);
+        digitalWrite(0, LOW);     //set pin 0 low prior to resetting to ensure the reset is done properly
         ESP.restart();
     }
-    else if (cmdStartsWith(packetBuffer, "D")) {
+    else if (cmdStartsWith(packetBuffer, "D") || cmdStartsWith(packetBuffer, "E")) {
 
       if (packetBuffer[1] == '1' && packetBuffer[2] == '1') {
         Stop();
@@ -250,9 +248,22 @@ void loop()
         }
       }
 
-      TurnSpeed = (int)StrToLong(packetBuffer, 5, 2, 16);    //*str, startindex, len, base
-      HandleTurnSpeed();
-      MotorSpeed = (int)StrToLong(packetBuffer, 8, 4, 16);    //*str, startindex, len, base
+      if (cmdStartsWith(packetBuffer, "D")) {
+
+        //Accelerometer interface:
+        TurnSpeed = (int)StrToLong(packetBuffer, 5, 2, 16);    //*str, startindex, len, base
+        HandleTurnSpeed();
+        MotorSpeed = (int)StrToLong(packetBuffer, 8, 4, 16);    //*str, startindex, len, base
+      }
+      else {
+        //Button interface:
+        if (packetBuffer[4] == '1') TurnSpeed = 0;
+        else if (packetBuffer[5] == '1') TurnSpeed = 100;
+        else TurnSpeed = 50;
+        HandleTurnSpeed();
+        
+        MotorSpeed = (int)StrToLong(packetBuffer, 7, 4, 16);    //*str, startindex, len, base
+      }
       //printf("MotorSpeed: %d\n",MotorSpeed);
       //printf("TurnSpeed: %d\n",TurnSpeed);
     }
@@ -333,7 +344,7 @@ void  GoNeutral() {
 }
 
 void HandleTurnSpeed() {
-  // Serial.printf("Turnspeed: %d  %d %d %d %d\n", TurnSpeed, newbuffer[0], newbuffer[1], newbuffer[2], newbuffer[3]);
+  //Serial.printf("Turnspeed: %d  %d %d %d %d\n", TurnSpeed, newbuffer[0], newbuffer[1], newbuffer[2], newbuffer[3]);
 
   if (TurnSpeed <= TurnMidPoint - TurnDeadband) {
     TurnPWM = PWMTicksPerTurnSpeed * ((TurnMidPoint - TurnDeadband) - TurnSpeed) + SoftTurnPWM;
@@ -414,8 +425,14 @@ void printWifiStatus() {
 void  OTASetup()
 {
   ArduinoOTA.onStart([]() {
-    OTAInProcess = true;
-    Serial.println("Start");
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH)
+      type = "sketch";
+    else // U_SPIFFS
+      type = "filesystem";
+
+    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+    Serial.println("Start updating " + type);
   });
   ArduinoOTA.onEnd([]() {
     Serial.println("\nEnd");
