@@ -10,6 +10,7 @@
 #include <WiFi.h>
 #include <WiFiUDP.h>
 #include <ArduinoOTA.h>
+#include "freertos/timers.h"
 
 bool DebugMode = false;
 
@@ -72,7 +73,6 @@ void ledcAnalogWrite(uint8_t channel, uint32_t value, uint32_t valueMax = 255) {
   ledcWrite(channel, duty);
 }
 
-
 void setup()
 {
 
@@ -119,6 +119,21 @@ void setup()
   //debugUdp.begin(debugPort);
 
   OTASetup();
+
+  //Set up FreeRTOS timer 
+  TimerHandle_t tmr;
+  int id=1;
+  int interval = 100;     //in mS
+  tmr = xTimerCreate("MyTimer", interval, pdTRUE, ( void * )id, vTimerCallback);
+  if( xTimerStart( tmr, 0 ) != pdPASS ) {
+   printf("Timer start error");
+  }
+  
+}
+
+//Every 100mS routine:
+void vTimerCallback(TimerHandle_t id) {
+
 }
 
 void loop()
