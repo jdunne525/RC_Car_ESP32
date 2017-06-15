@@ -129,18 +129,6 @@ void loop()
   
   int noBytes = Udp.parsePacket();
   if ( noBytes ) {
-
-    //debugUdp.beginPacket(debugUdp.remoteIP(), debugUdp.remotePort());
-
-    /*
-      Serial.print(millis() / 1000);
-      Serial.print(":Packet of ");
-      Serial.print(noBytes);
-      Serial.print(" received from ");
-      Serial.print(Udp.remoteIP());
-      Serial.print(":");
-      Serial.println(Udp.remotePort());
-    */
     // We've received a packet, read the data from it
     Udp.read(packetBuffer, noBytes); // read the packet into the buffer
 
@@ -211,13 +199,7 @@ void loop()
       //printf("MotorSpeed: %d\n",MotorSpeed);
       //printf("TurnSpeed: %d\n",TurnSpeed);
     }
-
-
-    //debugUdp.println();
-    //debugUdp.endPacket();
-
-//    Serial.println();
-  } // end if
+  }
 
   ArduinoOTA.handle();
   while (OTAInProcess) {
