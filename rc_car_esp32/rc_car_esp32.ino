@@ -1,12 +1,12 @@
 /*
-   31 mar 2015
-   This sketch display UDP packets coming from an UDP client.
-   On a Mac the NC command can be used to send UDP. (nc -u 192.168.1.101 2390).
+   Robo Remo powered RC car
+   Written for ESP32
 
    Configuration : Enter the ssid and password of your Wifi AP. Enter the port number your server is listening on.
 
 */
 
+#include "my_wifi_ssid_pass.h"  //file that contains MY_WIFI_SSID AND MY_WIFI_PASS only.  Comment this line and fill in the values directly.
 #include <WiFi.h>
 #include <WiFiUDP.h>
 #include <ArduinoOTA.h>
@@ -14,8 +14,8 @@
 bool DebugMode = false;
 
 int status = WL_IDLE_STATUS;
-const char* ssid = "***REMOVED***";  //  your network SSID (name)
-const char* pass = "***REMOVED***";       // your network password
+const char* ssid = MY_WIFI_SSID;       // your network SSID (name)
+const char* pass = MY_WIFI_PASS;       // your network password
 
 unsigned int localPort = 9876;      // local port to listen for UDP packets
 unsigned int debugPort = 23000;
@@ -292,230 +292,4 @@ void loop()
     ArduinoOTA.handle();
   }
 }
-
-unsigned long StrToLong(byte *str, int StartIndex, int Len, int base){
-  for (int i = 0; i < 9; i++) newbuffer[i] = 0;
-  int j = 0;
-  for (int i = StartIndex; i < StartIndex + Len; i++) {
-    if (packetBuffer[i] < '0') break;
-    newbuffer[j++] = packetBuffer[i];
-  }
-  return (strtoul(newbuffer, NULL, 16));
-}
-
-void  GoForward() {
-  StopBackward();
-
-//  if (MotorSpeed >= 1020) {
-//    digitalWrite(MotorForwardPin, true);
-//  }
-//  else {
-//    analogWrite(MotorForwardPin, MotorSpeed);
-//  }
-
-  ledcAnalogWrite(MotorForwardChannel, MotorSpeed, 1023);  
-  
-  FwdActive = true;
-  FwdLastMillis = millis();
-//  printf("Fwd");
-}
-
-void  StopForward() {
-  digitalWrite(MotorForwardPin, LOW);
-  analogWrite(MotorForwardPin, 0);
-  ledcAnalogWrite(MotorForwardChannel, 0, 1023);
-}
-
-void  Stop() {
-  BackActive = false;
-  digitalWrite(MotorBackwardPin, HIGH);
-  analogWrite(MotorBackwardPin, 0);
-  FwdActive = false;
-  digitalWrite(MotorForwardPin, HIGH);
-  analogWrite(MotorForwardPin, 0);
-//  printf("Stop");
-}
-
-void  GoBackward() {
-
-  StopForward();
-  if (MotorSpeed >= 1020) {
-    digitalWrite(MotorBackwardPin, true);
-  }
-  else {
-    analogWrite(MotorBackwardPin, MotorSpeed);
-  }
-  
-  BackActive = true;
-  BackLastMillis = millis();
-//  printf("Back");
-}
-
-void  StopBackward() {
-  digitalWrite(MotorBackwardPin, LOW);
-  analogWrite(MotorBackwardPin, 0);
-}
-
-void  GoNeutral() {
-  BackActive = false;
-  StopBackward();
-  FwdActive = false;
-  StopForward();
-//  printf("Neutral");
-}
-
-void HandleTurnSpeed() {
-  //Serial.printf("Turnspeed: %d  %d %d %d %d\n", TurnSpeed, newbuffer[0], newbuffer[1], newbuffer[2], newbuffer[3]);
-
-  if (TurnSpeed <= TurnMidPoint - TurnDeadband) {
-    TurnPWM = PWMTicksPerTurnSpeed * ((TurnMidPoint - TurnDeadband) - TurnSpeed) + SoftTurnPWM;
-    //Serial.print("left: ");
-    //Serial.printf("%d\n", TurnPWM);
-
-    LeftActive = true;
-    LeftLastMillis = millis();
-    
-    if (TurnPWM > HardTurnPWM) TurnPWM = HardTurnPWM;
-    if (TurnPWM == HardTurnPWM)  {
-      digitalWrite(MotorLeftPin, HIGH);
-      digitalWrite(MotorRightPin, LOW);
-    }
-    else {
-      analogWrite(MotorLeftPin, TurnPWM);
-      analogWrite(MotorRightPin, 0);
-    }
-  }
-  else if (TurnSpeed >= TurnMidPoint + TurnDeadband) {
-    TurnPWM = PWMTicksPerTurnSpeed * (TurnSpeed - (TurnMidPoint + TurnDeadband)) + SoftTurnPWM;
-    //Serial.print("right: ");
-    //Serial.printf("%d\n", TurnPWM);
-
-    RightActive = true;
-    RightLastMillis = millis();
-    
-    if (TurnPWM > HardTurnPWM) TurnPWM = HardTurnPWM;
-    if (TurnPWM == HardTurnPWM) {
-      digitalWrite(MotorRightPin, HIGH);
-      digitalWrite(MotorLeftPin, LOW);
-    }
-    else {
-      analogWrite(MotorRightPin, TurnPWM);
-      analogWrite(MotorLeftPin, 0);
-    }
-  }
-  else {
-    analogWrite(MotorLeftPin, 0);
-    analogWrite(MotorRightPin, 0);
-  }
-}
-
-boolean cmdStartsWith(byte *cmd, const char *st) { // checks if cmd starts with st
-  for (int i = 0; ; i++) {
-
-    //Serial.write(' ');
-    //Serial.write(cmd[i]);
-    //Serial.write(st[i]);
-
-    if (st[i] < '0') {
-      //Serial.print("ValidCmd\n");
-      return true;
-    }
-    if (cmd[i] < '0') {
-      //Serial.print("InvalidCmd1\n");
-      return false;
-    }
-    if (cmd[i] != st[i]) {
-      //Serial.print("InvalidCmd2\n");
-      return false;
-    }
-  }
-  return false;
-}
-
-void printWifiStatus() {
-  // print the SSID of the network you're attached to:
-  Serial.print("SSID: ");
-  Serial.println(WiFi.SSID());
-
-  // print your WiFi shield's IP address:
-  IPAddress ip = WiFi.localIP();
-  Serial.print("IP Address: ");
-  Serial.println(ip);
-}
-
-void  OTASetup()
-{
-  ArduinoOTA.onStart([]() {
-    String type;
-    if (ArduinoOTA.getCommand() == U_FLASH)
-      type = "sketch";
-    else // U_SPIFFS
-      type = "filesystem";
-
-    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-    Serial.println("Start updating " + type);
-  });
-  ArduinoOTA.onEnd([]() {
-    Serial.println("\nEnd");
-  });
-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-  });
-  ArduinoOTA.onError([](ota_error_t error) {
-    Serial.printf("Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-    else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-    else if (error == OTA_END_ERROR) Serial.println("End Failed");
-  });
-  ArduinoOTA.begin();
-}
-
-
-////Untested as it turns out we don't need multiple frequencies for analogWrite()
-////Soft PWM, which supports exactly one pin at a variable frequency and handled in the main loop()
-//int SoftPWMPinNum = 0;
-//int SoftPWMPeriod = 1000;
-//int SoftPWMOffTime = 500;
-//int SoftPWMOnTime = 500;
-//
-//void  SetSoftPWMPeriod(int PWMPeriod) {
-//  SoftPWMPeriod = PWMPeriod;
-//}
-//void  SetSoftPWM(int PinToPWM, int PWMOnTime) {
-//  SoftPWMPinNum = PinToPWM;
-//  SoftPWMOnTime = PWMOnTime;
-//  if (SoftPWMOnTime < SoftPWMPeriod) {
-//    SoftPWMOffTime = SoftPWMPeriod - SoftPWMOnTime;
-//  }
-//  else {
-//    SoftPWMOffTime = 0;
-//  }
-//}
-//
-//void  HandleSoftPWM() {
-//  static unsigned long SoftPWMlastEventMicros = 0;
-//
-//  if (SoftPWMOffTime == 0) {
-//    digitalWrite(SoftPWMPinNum, true);
-//    return;
-//  }
-//  else if (SoftPWMOffTime == 0) {
-//    digitalWrite(SoftPWMPinNum, false);
-//    return;
-//  }
-//  if (digitalRead(SoftPWMPinNum)) {
-//    if (micros() - SoftPWMlastEventMicros >= SoftPWMOnTime) {
-//      digitalWrite(SoftPWMPinNum, false);
-//      SoftPWMlastEventMicros = micros();
-//    }
-//  }
-//  else {
-//    if (micros() - SoftPWMlastEventMicros >= SoftPWMOffTime) {
-//      digitalWrite(SoftPWMPinNum, true);
-//      SoftPWMlastEventMicros = micros();
-//    }
-//  }
-//}
 

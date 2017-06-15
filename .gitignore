@@ -95,3 +95,4 @@ Thumbs.db
 
 # Folder config file
 Desktop.ini
+rc_car_esp32/my_wifi_ssid_pass.h
