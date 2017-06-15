@@ -1,4 +1,47 @@
 
+int MotorSleepPin = 25;
+
+int MotorForwardPin = 33;
+int MotorBackwardPin = 32;
+int MotorLeftPin = 12;
+int MotorRightPin = 14;
+
+int MotorForwardChannel = 0;
+int MotorBackwardChannel = 1;
+int MotorLeftChannel = 2;
+int MotorRightChannel = 3;
+
+// use 13 bit precission for LEDC timer
+#define LEDC_TIMER_13_BIT  13
+
+
+void  SetupMotorIO() {
+  pinMode(MotorForwardPin, OUTPUT);
+  pinMode(MotorBackwardPin, OUTPUT);
+  pinMode(MotorLeftPin, OUTPUT);
+  pinMode(MotorRightPin, OUTPUT);
+  pinMode(MotorSleepPin, OUTPUT);
+
+  digitalWrite(MotorForwardPin, LOW);
+  digitalWrite(MotorBackwardPin, LOW);
+  digitalWrite(MotorLeftPin, LOW);
+  digitalWrite(MotorRightPin, LOW);
+  digitalWrite(MotorSleepPin, HIGH);
+
+  ledcSetup(MotorForwardChannel, PWMFrequency, LEDC_TIMER_13_BIT);
+//  ledcSetup(MotorBackwardChannel, PWMFrequency, LEDC_TIMER_13_BIT);
+//  ledcSetup(MotorLeftChannel, PWMFrequency, LEDC_TIMER_13_BIT);
+//  ledcSetup(MotorRightChannel, PWMFrequency, LEDC_TIMER_13_BIT);
+//
+  ledcAttachPin(MotorForwardPin, MotorForwardChannel);
+//  ledcAttachPin(MotorBackwardPin, MotorBackwardChannel);
+//  ledcAttachPin(MotorLeftPin, MotorLeftChannel);
+//  ledcAttachPin(MotorRightPin, MotorRightChannel);
+
+}
+
+
+
 void  GoForward() {
   StopBackward();
 
@@ -10,10 +53,7 @@ void  GoForward() {
 //  }
 
   ledcAnalogWrite(MotorForwardChannel, MotorSpeed, 1023);  
-  
-  FwdActive = true;
-  FwdLastMillis = millis();
-//  printf("Fwd");
+ //  printf("Fwd");
 }
 
 void  StopForward() {
@@ -23,10 +63,8 @@ void  StopForward() {
 }
 
 void  Stop() {
-  BackActive = false;
   digitalWrite(MotorBackwardPin, HIGH);
   analogWrite(MotorBackwardPin, 0);
-  FwdActive = false;
   digitalWrite(MotorForwardPin, HIGH);
   analogWrite(MotorForwardPin, 0);
 //  printf("Stop");
@@ -42,8 +80,6 @@ void  GoBackward() {
     analogWrite(MotorBackwardPin, MotorSpeed);
   }
   
-  BackActive = true;
-  BackLastMillis = millis();
 //  printf("Back");
 }
 
@@ -53,9 +89,7 @@ void  StopBackward() {
 }
 
 void  GoNeutral() {
-  BackActive = false;
   StopBackward();
-  FwdActive = false;
   StopForward();
 //  printf("Neutral");
 }
@@ -67,9 +101,6 @@ void HandleTurnSpeed() {
     TurnPWM = PWMTicksPerTurnSpeed * ((TurnMidPoint - TurnDeadband) - TurnSpeed) + SoftTurnPWM;
     //Serial.print("left: ");
     //Serial.printf("%d\n", TurnPWM);
-
-    LeftActive = true;
-    LeftLastMillis = millis();
     
     if (TurnPWM > HardTurnPWM) TurnPWM = HardTurnPWM;
     if (TurnPWM == HardTurnPWM)  {
@@ -86,9 +117,6 @@ void HandleTurnSpeed() {
     //Serial.print("right: ");
     //Serial.printf("%d\n", TurnPWM);
 
-    RightActive = true;
-    RightLastMillis = millis();
-    
     if (TurnPWM > HardTurnPWM) TurnPWM = HardTurnPWM;
     if (TurnPWM == HardTurnPWM) {
       digitalWrite(MotorRightPin, HIGH);

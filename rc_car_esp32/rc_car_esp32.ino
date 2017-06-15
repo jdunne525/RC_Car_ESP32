@@ -36,22 +36,6 @@ WiFiUDP Udp;
 
 int OTAInProcess = false;
 
-int MotorForwardPin = 33;
-int MotorBackwardPin = 32;
-int MotorLeftPin = 12;
-int MotorRightPin = 14;
-
-int MotorForwardChannel = 0;
-int MotorBackwardChannel = 1;
-int MotorLeftChannel = 2;
-int MotorRightChannel = 3;
-
-// use 13 bit precission for LEDC timer
-#define LEDC_TIMER_13_BIT  13
-
-int MotorSleepPin = 25;
-int TestPin = 2;
-
 int LEDPin = 15;
 bool LEDOn = true;
 
@@ -70,14 +54,6 @@ int PWMTicksPerTurnSpeed = 6;   //(HardTurnPWM - SoftTurnPWM) / (TurnMidPoint - 
 
 int CommandTimeout = 60000;
 
-bool FwdActive = false;
-int FwdLastMillis = 0;
-bool BackActive = false;
-int BackLastMillis = 0;
-bool LeftActive = false;
-int LeftLastMillis = 0;
-bool RightActive = false;
-int RightLastMillis = 0;
 bool LightDebounce = false;
 int LightDebounceMillis = 0;
 
@@ -100,29 +76,9 @@ void ledcAnalogWrite(uint8_t channel, uint32_t value, uint32_t valueMax = 255) {
 void setup()
 {
 
-  pinMode(MotorForwardPin, OUTPUT);
-  pinMode(MotorBackwardPin, OUTPUT);
-  pinMode(MotorLeftPin, OUTPUT);
-  pinMode(MotorRightPin, OUTPUT);
-  pinMode(MotorSleepPin, OUTPUT);
+  SetupMotorIO();
+  
   pinMode(LEDPin, OUTPUT);
-  pinMode(TestPin, OUTPUT);
-
-  digitalWrite(MotorForwardPin, LOW);
-  digitalWrite(MotorBackwardPin, LOW);
-  digitalWrite(MotorLeftPin, LOW);
-  digitalWrite(MotorRightPin, LOW);
-  digitalWrite(MotorSleepPin, HIGH);
-
-  ledcSetup(MotorForwardChannel, PWMFrequency, LEDC_TIMER_13_BIT);
-//  ledcSetup(MotorBackwardChannel, PWMFrequency, LEDC_TIMER_13_BIT);
-//  ledcSetup(MotorLeftChannel, PWMFrequency, LEDC_TIMER_13_BIT);
-//  ledcSetup(MotorRightChannel, PWMFrequency, LEDC_TIMER_13_BIT);
-//
-  ledcAttachPin(MotorForwardPin, MotorForwardChannel);
-//  ledcAttachPin(MotorBackwardPin, MotorBackwardChannel);
-//  ledcAttachPin(MotorLeftPin, MotorLeftChannel);
-//  ledcAttachPin(MotorRightPin, MotorRightChannel);
 
   if (LEDOn) {
     digitalWrite(LEDPin, false);
@@ -167,30 +123,6 @@ void setup()
 
 void loop()
 {
-
-  
-  if (FwdActive && millis() - FwdLastMillis > CommandTimeout) {
-    FwdActive = false;
-    digitalWrite(MotorForwardPin, LOW);
-    analogWrite(MotorForwardPin, 0);
-  }
-
-  if (BackActive && millis() - BackLastMillis > CommandTimeout) {
-    BackActive = false;
-    digitalWrite(MotorBackwardPin, LOW);
-    analogWrite(MotorBackwardPin, 0);
-  }
-
-  if (LeftActive && millis() - LeftLastMillis > CommandTimeout) {
-    LeftActive = false;
-    digitalWrite(MotorLeftPin, LOW);
-  }
-
-  if (RightActive && millis() - RightLastMillis > CommandTimeout) {
-    RightActive = false;
-    digitalWrite(MotorRightPin, LOW);
-  }
-
   if (LightDebounce && millis() - LightDebounceMillis > 250) {
     LightDebounce = false;
   }
