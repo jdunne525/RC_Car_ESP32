@@ -29,12 +29,12 @@ void  SetupMotorIO() {
   digitalWrite(MotorSleepPin, HIGH);
 
   ledcSetup(MotorForwardChannel, PWMFrequency, LEDC_TIMER_13_BIT);
-//  ledcSetup(MotorBackwardChannel, PWMFrequency, LEDC_TIMER_13_BIT);
+  ledcSetup(MotorBackwardChannel, PWMFrequency, LEDC_TIMER_13_BIT);
 //  ledcSetup(MotorLeftChannel, PWMFrequency, LEDC_TIMER_13_BIT);
 //  ledcSetup(MotorRightChannel, PWMFrequency, LEDC_TIMER_13_BIT);
 //
   ledcAttachPin(MotorForwardPin, MotorForwardChannel);
-//  ledcAttachPin(MotorBackwardPin, MotorBackwardChannel);
+  ledcAttachPin(MotorBackwardPin, MotorBackwardChannel);
 //  ledcAttachPin(MotorLeftPin, MotorLeftChannel);
 //  ledcAttachPin(MotorRightPin, MotorRightChannel);
 
@@ -45,47 +45,42 @@ void  SetupMotorIO() {
 void  GoForward() {
   StopBackward();
 
-//  if (MotorSpeed >= 1020) {
-//    digitalWrite(MotorForwardPin, true);
-//  }
-//  else {
-//    analogWrite(MotorForwardPin, MotorSpeed);
-//  }
+  if (MotorSpeed >= 1010) {
+    ledcAnalogWrite(MotorForwardChannel, 1023, 1023);
+  }
+  else {
+    ledcAnalogWrite(MotorForwardChannel, MotorSpeed, 1023);
+  }
 
-  ledcAnalogWrite(MotorForwardChannel, MotorSpeed, 1023);  
  //  printf("Fwd");
 }
 
 void  StopForward() {
-  digitalWrite(MotorForwardPin, LOW);
-  analogWrite(MotorForwardPin, 0);
   ledcAnalogWrite(MotorForwardChannel, 0, 1023);
 }
 
 void  Stop() {
-  digitalWrite(MotorBackwardPin, HIGH);
-  analogWrite(MotorBackwardPin, 0);
-  digitalWrite(MotorForwardPin, HIGH);
-  analogWrite(MotorForwardPin, 0);
+  ledcAnalogWrite(MotorBackwardChannel, 1023, 1023);
+  ledcAnalogWrite(MotorForwardChannel, 1023, 1023);
+
 //  printf("Stop");
 }
 
 void  GoBackward() {
-
   StopForward();
-  if (MotorSpeed >= 1020) {
-    digitalWrite(MotorBackwardPin, true);
+
+  if (MotorSpeed >= 1010) {
+    ledcAnalogWrite(MotorBackwardChannel, 1023, 1023);
   }
   else {
-    analogWrite(MotorBackwardPin, MotorSpeed);
+    ledcAnalogWrite(MotorBackwardChannel, MotorSpeed, 1023);
   }
   
 //  printf("Back");
 }
 
 void  StopBackward() {
-  digitalWrite(MotorBackwardPin, LOW);
-  analogWrite(MotorBackwardPin, 0);
+  ledcAnalogWrite(MotorBackwardChannel, 0, 1023);
 }
 
 void  GoNeutral() {
