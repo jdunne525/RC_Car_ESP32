@@ -96,3 +96,6 @@ Thumbs.db
 # Folder config file
 Desktop.ini
 rc_car_esp32/my_wifi_ssid_pass.h
+rc_car_esp32/.vscode/c_cpp_properties.json
+rc_car_esp32/.vscode/arduino.json
+rc_car_esp32/.vscode/launch.json

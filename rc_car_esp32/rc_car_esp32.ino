@@ -21,13 +21,6 @@ const char* pass = MY_WIFI_PASS;       // your network password
 unsigned int localPort = 9876;      // local port to listen for UDP packets
 unsigned int debugPort = 23000;
 
-unsigned int PWMFrequency = 20;       //20Hz is what we need for the steering to function properly
-//1KHz pwm squeals like crazy...
-//5KHz:  squeal isn't horrible, but don't go below about 600 for the PWM value.. torque seems low
-//300Hz: much better!  okay down to about 350
-//200Hz: okay.. 300 seems better
-//100Hz: no good.  very non-linear.. we're delivering too much during the on pulses the motor barely slows at lower duty cycles
-
 byte packetBuffer[512]; //buffer to hold incoming and outgoing packets
 char newbuffer[32];
 
@@ -40,38 +33,13 @@ int OTAInProcess = false;
 int LEDPin = 15;
 bool LEDOn = true;
 
-int MotorSpeed = 600;
-int Direction = 50;
-
-int TurnSpeed = 0;
-int TurnMidPoint = 50;
-int TurnMaxSpeed = 100;
-int TurnDeadband = 10;
-int HardTurnPWM = 300;
-int SoftTurnPWM = 150;
-int TurnPWM = 0;
-
-int PWMTicksPerTurnSpeed = 6;   //(HardTurnPWM - SoftTurnPWM) / (TurnMidPoint - TurnDeadband)
-
 int CommandTimeout = 60000;
 
 bool LightDebounce = false;
 int LightDebounceMillis = 0;
 
-//Notes on PWM controlled Turning:
-//20Hz at 150 through 250 / 1024 counts seem to be good turning thresholds
-
-
-#define analogWrite(pin, pwm) digitalWrite(pin, (pwm > 0))
-
-void ledcAnalogWrite(uint8_t channel, uint32_t value, uint32_t valueMax = 255) {
-  // calculate duty, 8191 from 2 ^ 13 - 1
-
-  uint32_t duty = (8191 / valueMax) * (value < valueMax ? value : valueMax);    //min(value, valueMax);
-
-  // write duty to LEDC
-  ledcWrite(channel, duty);
-}
+int TurnSpeed = 0;
+int MotorSpeed = 600;
 
 void setup()
 {
