@@ -134,8 +134,6 @@ void HandleTurnSpeed() {
     
     if (TurnPWM > HardTurnPWM) TurnPWM = HardTurnPWM;
     if (TurnPWM == HardTurnPWM)  {
-      //digitalWrite(MotorLeftPin, HIGH);
-      //digitalWrite(MotorRightPin, LOW);
       ledcAnalogWrite(MotorLeftChannel, 1023, 1023);
       ledcAnalogWrite(MotorRightChannel, 0, 1023);
     }
@@ -151,22 +149,16 @@ void HandleTurnSpeed() {
 
     if (TurnPWM > HardTurnPWM) TurnPWM = HardTurnPWM;
     if (TurnPWM == HardTurnPWM) {
-      //digitalWrite(MotorRightPin, HIGH);
-      //digitalWrite(MotorLeftPin, LOW);
 
       ledcAnalogWrite(MotorRightChannel, 1023, 1023);
       ledcAnalogWrite(MotorLeftChannel, 0, 1023);
     }
     else {
-      //analogWrite(MotorRightPin, TurnPWM);
-      //analogWrite(MotorLeftPin, 0);
       ledcAnalogWrite(MotorRightChannel, TurnPWM, 1023);
       ledcAnalogWrite(MotorLeftChannel, 0, 1023);
     }
   }
   else {
-    //analogWrite(MotorLeftPin, 0);
-    //analogWrite(MotorRightPin, 0);
     ledcAnalogWrite(MotorRightChannel, 0, 1023);
     ledcAnalogWrite(MotorLeftChannel, 0, 1023);
 
