@@ -115,7 +115,7 @@ void loop()
     // We've received a packet, read the data from it
     Udp.read(packetBuffer, noBytes); // read the packet into the buffer
 
- DebugMode = false;
+ DebugMode = true;
     if (DebugMode) {
       // display the packet contents in HEX
       for (int i = 1; i <= noBytes; i++) {
